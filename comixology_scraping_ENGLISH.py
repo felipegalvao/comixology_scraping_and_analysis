@@ -13,7 +13,7 @@ import pickle
 import time
 import os.path
 
-# Remover atributos dos links de uma lista de links e retornar lista "limpa"
+# Remove attributes from links in a list and return "clean" list
 def remove_attributes_from_link(comic_link_list):
     clean_comic_link_list = []   
     for comic_link in comic_link_list:
@@ -22,32 +22,32 @@ def remove_attributes_from_link(comic_link_list):
         clean_comic_link_list.append(new_comic_link)
     return(clean_comic_link_list)
 
-# Retornar lista de Links dos Publishers
+# Return list with links of publishers
 def get_publishers_links():
     publisher_links = []
     
-    # Iterar por cada página do link Browse > by Publisher
+    # Iterate through each page of the link Browse > by Publisher
     for i in range(1,5):
-        # Definição do link a ser explorado
+        # Definition of the link to be scraped
         link = 'https://www.comixology.com/browse-publisher?publisherList_pg='
         page = requests.get(link+str(i))
         tree = html.fromstring(page.content)
         
-        # Expressão Xpath para extração dos links dos Publishers        
+        # Xpath expression for extraction of Publishers' links        
         quantity_pub_xpath = '//div[@class="list publisherList"]/ul'
         quantity_pub_xpath += '/li[@class="content-item"]/figure/div/a/@href'
         
-        # Extração dos links através da função Xpath    
+        # Extraction of links through Xpath function
         extracted_publishers_links = tree.xpath(quantity_pub_xpath)
         clean_publisher_links = remove_attributes_from_link(
             extracted_publishers_links)
-        # Inserir os links na lista já criada
+        # Insert links into the already created list
         publisher_links.extend(clean_publisher_links)
             
     return(publisher_links)
 
-# Recebe lista de links de cada Publisher e retorna lista de links para as
-# Series de comics existentes no site Comixology
+# Receive list of links for each Publisher and return list of links for the 
+# Comics Series
 def get_series_links_from_publisher(publisher_links):
     series_links = []
     
@@ -55,48 +55,49 @@ def get_series_links_from_publisher(publisher_links):
         page = requests.get(link)
         tree = html.fromstring(page.content)
         
-        # String xpath para extração da quantidade total de Series
+        # Xpath string for extraction of total quantity of Series
         xpath_series = '//div[@class="list seriesList"]/div[@class="pager"]'
         xpath_series += '/div[@class="pager-text"]/text()'
         
         total_series = tree.xpath(xpath_series)
         
-        # Se a extração retornou a quantidade total:
+        # If the extraction returned the total quantity
         if total_series:
-            # O único item da lista é a string, cujo último elemento é a 
-            # quantidade de Series
+            # The only item in the list is a string with the quantity, which
+            # we will split to create a list with each word of it
             total_series = total_series[0].split()
+            # Quantity of series will be the last item of that series
             total_series = int(total_series[len(total_series)-1])
-            # Divide-se o total de Series por 36, afim de descobrir o número
-            # de páginas de Series neste Publisher
+            # Divide the quantity of Series by 36, in order to discover the
+            # number of pages of Series in this Publisher
             if total_series % 36 == 0:
                 number_of_pages = (total_series // 36)
             else:
                 number_of_pages = (total_series // 36) + 1
-        # Se a extração retornou uma lista vazia, só existe uma página de Series
+        # If the extraction returns an empty list, there is only one page of Series
         else:
-            number_of_pages = 1     
+            number_of_pages = 1
         for page_number in range(1,number_of_pages+1):
-            page = requests.get(link+'?seriesList_pg='+str(page_number))                
-            tree = html.fromstring(page.content)            
+            page = requests.get(link+'?seriesList_pg='+str(page_number))
+            tree = html.fromstring(page.content)
             
-            # String Xpath para extração dos links das Series nesta página
+            # Xpath for extraction of the Series links in this page
             xpath_series_links = '//div[@class="list seriesList"]/ul/'
             xpath_series_links += 'li[@class="content-item"]/figure/'
             xpath_series_links += 'div[@class="content-cover"]/a/@href'
-            extracted_series_links = tree.xpath(xpath_series_links) 
-            clean_series_links = remove_attributes_from_link(extracted_series_links)                
+            extracted_series_links = tree.xpath(xpath_series_links)
+            clean_series_links = remove_attributes_from_link(extracted_series_links)
             series_links.extend(clean_series_links)
     return(series_links)
 
 
 def extract_comics_links(link, div_xpath, page_link_str, tree):
     type_comics_links = []
-    # Checa se o div para o tipo de comic em questão existe
+    # Check if the div for this type of comic exists
     type_div = tree.xpath(div_xpath)
     
     if type_div:
-        # Busca a quantidade total de comics para este tipo de comic
+        # Get the total quantity of comics for this type of comic
         total_quantity_xpath = div_xpath + '/div[@class="pager"]/'
         total_quantity_xpath += 'div[@class="pager-text"]/text()'
         total_type = tree.xpath(total_quantity_xpath)
@@ -112,7 +113,7 @@ def extract_comics_links(link, div_xpath, page_link_str, tree):
         for page_number in range(1,number_of_pages+1):            
             page = requests.get(link+page_link_str+str(page_number))                
             tree = html.fromstring(page.content)
-            # Path para os links deste tipo de comic
+            # Path for the links to this type of comic
             type_links_xpath = div_xpath + '/ul/li/figure/div/a/@href'
             type_links = tree.xpath(type_links_xpath)
             clean_type_links = remove_attributes_from_link(type_links)            
@@ -136,7 +137,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
         tree = html.fromstring(page.content)
         
 # -------------------------------------------------------------- #
-        # Código de scraping para collected editions
+        # Scraping code for the collected editions
 # -------------------------------------------------------------- #        
         
         collected_div_xpath = '//div[@class="list CollectedEditions"]'
@@ -146,7 +147,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                                collected_link_str, tree)
                 
 # -------------------------------------------------------------- #
-        # Código de scraping para Issues
+        # Scraping code for the Issues
 # -------------------------------------------------------------- #
         issues_div_xpath = '//div[@class="list Issues"]'
         issues_link_str = '?Issues_pg='
@@ -155,7 +156,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                             issues_link_str, tree)
                 
 # -------------------------------------------------------------- #
-        # Código de scraping para Omnibuses
+        # Scraping code for the Omnibuses
 # -------------------------------------------------------------- #
         omnibuses_div_xpath = '//div[@class="list Omnibuses"]'
         omnibuses_link_str = '?Omnibuses_pg='               
@@ -164,7 +165,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                                omnibuses_link_str, tree)
         
 # -------------------------------------------------------------- #
-        # Código de scraping para One-Shots
+        # Scraping code for the One-Shots
 # -------------------------------------------------------------- #
         oneshots_div_xpath = '//div[@class="list OneShots"]'
         oneshots_link_str = '?Oneshots_pg='
@@ -173,7 +174,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                               oneshots_link_str, tree)
                     
 # -------------------------------------------------------------- #
-        # Código de scraping para Bandees Dessinees
+        # Scraping code for the Bandees Dessinees
 # -------------------------------------------------------------- #
         bandes_div_xpath = '//div[@class="list BandesDessines"]'
         bandes_link_str = '?BandeesDessinees_pg='
@@ -182,7 +183,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                               bandes_link_str, tree)
 
 # -------------------------------------------------------------- #
-        # Código de scraping para Graphic Novels
+        # Scraping code for the Graphic Novels
 # -------------------------------------------------------------- #
         graphicnovels_div_xpath = '//div[@class="list GraphicNovels"]'
         graphicnovels_link_str = '?GraphicNovels_pg='
@@ -191,7 +192,7 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                               graphicnovels_link_str, tree)
 
 # -------------------------------------------------------------- #
-        # Código de scraping para Extras
+        # Scraping code for the Extras
 # -------------------------------------------------------------- #
         extras_div_xpath = '//div[@class="list Extras"]'
         extras_link_str = '?Extras_pg='
@@ -200,26 +201,25 @@ def get_issues_links_from_series(series_links, comics_links_counter):
                                               extras_link_str, tree)
                     
 # -------------------------------------------------------------- #
-        # Código de scraping para Artbooks
+        # Scraping code for Artbooks
 # -------------------------------------------------------------- #
         artbooks_div_xpath = '//div[@class="list Artbooks"]'
         artbooks_link_str = '?Artbooks_pg='
                     
         artbooks_links = extract_comics_links(link, artbooks_div_xpath,
                                               artbooks_link_str, tree)
-        
-        # Juntar os links de cada tipo de comic com a lista previamente criada                                      
+                                              
+        # Add links to all kinds of comics in the list previously created
         comics_links.extend(collected_links + issues_links + omnibuses_links + 
                             oneshots_links + bandes_links + graphicnovels_links + 
                             extras_links + artbooks_links)        
         
-        # Exportar os links de comics de 100 em 100 ou quando o contador chega
-        # ao último link para evitar perda de informações em possíveis erros / 
-        # problemas
+        # Export links each time 100 links are visited, avoiding loss of information 
+		# due to possible errors
         if (counter % 100 == 0 and counter != 0) or (
             counter == len(series_links) - 1):
-            comics_links = comics_links_dump(comics_links, counter, 
-                                             comics_links_counter)            
+            comics_links = comics_links_dump(comics_links, counter,
+                                             comics_links_counter)
     return(comics_links)
 
 def get_comic_info_from_page(link):
@@ -228,18 +228,17 @@ def get_comic_info_from_page(link):
     page = requests.get(link)    
     tree = html.fromstring(page.content)    
     
-    # Definir o caminho base que contém o conteúdo da página
+    # Define the base path that contains the content of the page
     base_path = '//div[@class="comic_view detail-container"]'
     
-    # Extração do título da página, para verificar se este endereço retorna
-    # um erro 404 ou não. Se não for um erro, continua o código
+     # Extract the title of the page, to check if this address returns a 404 error
     page_title = tree.xpath('//title/text()')[0]    
     if page_title != 'Site Error - Comics by comiXology':
-        # Extrair o nome do comic
+        # Extract the name of the comic
         name = tree.xpath('//h2[@itemprop="name"]/text()')
         comic_info['Name'] = name[0]
         
-        # Extrair lista das tarefas dos créditos e nomes que fazem cada uma
+        # Extract list of tasks from credits and names that execute each task
         credits_tasks_str = base_path + '/div[@id="column3"]/'
         credits_tasks_str += 'div[@class="credits"]/div/dl/dt/text()'
         credits_tasks = tree.xpath(credits_tasks_str)
@@ -249,8 +248,7 @@ def get_comic_info_from_page(link):
         credits_names = tree.xpath(credits_names_str)
         
         # ---------------------------------------------------------------------
-        # Consertar os nomes, remover sequências escapadas e criar nova lista 
-        # de nomes
+        # Fix names, remove scape sequences and create new list of names
         # ---------------------------------------------------------------------
         credits_names_lists = []
         
@@ -272,21 +270,21 @@ def get_comic_info_from_page(link):
             new_names_credits.append(new_names)
             new_names = []
         # ---------------------------------------------------------------------
-        # Fim do ajuste dos nomes
+        # End of name fixing
         # ---------------------------------------------------------------------
         
-        # Inserir cada informação de crédito no dict comic_info
+        # Insert each credits information in the comic_info dictionary
         for counter, item in enumerate(credits_tasks):        
             comic_info[item] = new_names_credits[counter]
         
-        # Extrair o Publisher do comic
+        # Extract Publisher of comic
         publisher = tree.xpath('//*[@id="column3"]/div/div[1]/a[2]/span/text()')
         publisher = re.sub("^\\n\\t\\t\\t","",publisher[0])
         publisher = re.sub("\\t\\t$","",publisher)
         comic_info['Publisher'] = publisher
         
-        # Extrair lista de informações sobre o comic, como contagem de página, 
-        # faixa etária, etc
+        # Extract list of informations of the comic, such as page count, 
+		# age classification, etc
         comics_infos_names_xpath = base_path + '/div[@id="column3"]/'
         comics_infos_names_xpath += 'div[@class="credits"]/'
         comics_infos_names_xpath += 'h4[@class="subtitle"]/text()'
@@ -297,37 +295,37 @@ def get_comic_info_from_page(link):
         comics_infos_values_xpath += 'div[@class="aboutText"]/text()'        
         comics_infos_values = tree.xpath(comics_infos_values_xpath)
         
-        # Inserir a informação do comic no dictionary
+        # Add the information of the comic into the dictionary
         for counter, item in enumerate(comics_infos_names):
             if item == 'Page Count':            
                 comic_info[item] = int(comics_infos_values[counter].split()[0])
             else:
                 comic_info[item] = comics_infos_values[counter]
                 
-        # Extrair os preços do comic
+        # Extract prices from the comic
         full_price_xpath = '//h6[@class="item-full-price"]/text()'
-        # Extrair preço cheio
+        # Extract full price
         full_price = tree.xpath(full_price_xpath)
         discounted_price_xpath = '//div[@class="pricing-info"]/'
         discounted_price_xpath += 'h5[@class="item-price"]/text()'
-        # Extrair preço descontado, se houver
+        # Extract discounted price, if it exists
         discounted_price = tree.xpath(discounted_price_xpath)
         if discounted_price:
-            # Se preço descontado é igual a string FREE, esse é um comic gratuito
+            # If discounted price is equal to the string FREE, this is a free comic
             if discounted_price[0] == 'FREE':
                 final_price = 0.0
-            # Se não, extrair o preço final
+            # If it is not, extract the final price
             else:
                 final_price = float(discounted_price[0][1:])
-            # Se existe um preço cheio, o comic tem um preço descontado
+            # If there is a full price, the comic has a discounted price too
             if full_price:
                 original_price = float(full_price[0][1:])
                 discounted = True
-            # Se não, os preços são iguais e não há desconto para este comic
+            # If there is not, the prices are equal and there is no discount
             else:
                 original_price = final_price
                 discounted = False            
-        # Estes casos se aplicam a comics exclusivos de Bundles
+        # Comics exclusive to bundles
         else:
             final_price = None
             original_price = None
@@ -336,7 +334,7 @@ def get_comic_info_from_page(link):
         comic_info['Final_price'] = final_price
         comic_info['Discounted'] = discounted
     
-        # Extrair a avaliação do comic do elemento escondido
+        # Extract comic rating from the hidden element
         ratings_value_xpath = '//*[@id="column2"]/div[2]/div[2]/div[2]/text()'
         ratings_value = tree.xpath(ratings_value_xpath)
         if ratings_value:
@@ -347,7 +345,7 @@ def get_comic_info_from_page(link):
         else:
             comic_info['Rating'] = None
         
-        # Extrair quantidade de avaliações no comic
+        # Extract comic's rating quantity
         ratings_quantity_xpath = '//*[@id="column2"]/div[2]/div[2]/div[1]/text()'
         ratings_quantity = tree.xpath(ratings_quantity_xpath)    
         if ratings_quantity:
@@ -376,7 +374,7 @@ def get_all_comics_info(comics_links, start_counter):
             
 def join_comics_links():
     comics_links = []
-    # Para cada arquivo na pasta "comics_links_folder"
+    # For each file one the "comics_links_folder" folder
     for file in os.listdir("comics_links_folder"):
         temp_comics_links = pickle.load(open("comics_links_folder/" + file,"rb"))                
         comics_links.append(temp_comics_links)
@@ -384,7 +382,7 @@ def join_comics_links():
     
 def join_comics_info():
     comics_info = []
-    # Para cada arquivo na pasta "comics_info_files"
+    # For each file in the "comics_info_files" folder
     for file in os.listdir("comics_info_files"):
         if file != "counter_comics_info.p" and file != "Comics_info_backup.7z":
             print(file)
@@ -393,11 +391,11 @@ def join_comics_info():
                 comics_info.append(comic)
     pickle.dump(comics_info, open("all_comics_info.p", "wb"))
 
-# Checar se o arquivo publisher_links.p existe   
+# Check if the file publisher_links.p exists; if it does not, do the scraping   
 if os.path.isfile('publisher_links.p') == True:
     print("Arquivo de Links de Publishers já existe... carregando arquivo")
     publisher_links = pickle.load(open("publisher_links.p","rb"))
-# Se não existir, iniciar o scraping
+# If it does not, do the scraping
 else:
     print("Arquivo de Links de Publishers não existe.")
     print("Iniciando o Scraping do site para links de Publishers.")
@@ -405,11 +403,11 @@ else:
     publisher_links = get_publishers_links()
     pickle.dump(publisher_links, open("publisher_links.p","wb"))
 
-# Checar se o arquivo series_links.p existe    
+# Check if the series_links.p file exists    
 if os.path.isfile('series_links.p') == True:
     print("Arquivo de Links de Series já existe... carregando arquivo")
     series_links = pickle.load(open("series_links.p","rb"))
-# Se não existir, iniciar o scraping  
+# If it does not, do the scraping  
 else:
     print("Arquivo de Links de Series não existe.")
     print("Iniciando o Scraping do site para links de Series.")
@@ -417,81 +415,102 @@ else:
     series_links = get_series_links_from_publisher(publisher_links)
     pickle.dump(series_links, open("series_links.p","wb"))
  
-# Checar se a pasta "comics_links_files" existe   
+# Check if the file publisher_links.p exists; if it does not, do the scraping
+if os.path.isfile('publisher_links.p') == True:
+    print("Publisher links file already exists... loading file")
+    publisher_links = pickle.load(open("publisher_links.p","rb"))
+else:
+    print("Publisher links file does not exists.")
+    print("Scraping website for the publisher links")
+    print("Links will be exported to publisher_links.p")
+    publisher_links = get_publishers_links()
+    pickle.dump(publisher_links, open("publisher_links.p","wb"))
+    
+# Check if the series_links.p file exists; if it does not, do the scraping
+if os.path.isfile('series_links.p') == True:
+    print("Series links file already exists... loading file")
+    series_links = pickle.load(open("series_links.p","rb"))
+else:
+    print("Series links file does not exists.")
+    print("Scraping website for the series links")
+    print("Links will be exported to series_links.p")
+    series_links = get_series_links_from_publisher(publisher_links)
+    pickle.dump(series_links, open("series_links.p","wb"))
+ 
+# Check if the comics_links_files folder exists
 if os.path.isdir('comics_links_files'):
-    print("Pasta comics_links_files já existe. Checando arquivos.")
-    # Checar se o arquivo comics_links_counter.p (contador) existe
+    print("Folder comics_links_files already exists. Checking for files")
+    # Check if the counter for the scraping code exists
     if os.path.isfile('comics_links_files/comics_links_counter.p'):
-        # Carregar o contador
-        comics_links_counter = pickle.load(open("comics_links_files/comics_links_counter.p","rb"))        
-        print("Contagem atual: " + str(comics_links_counter+1) + " de " +
+        # Load the counter and check if the scraping process is complete
+        comics_links_counter = pickle.load(open("comics_links_files/comics_links_counter.p","rb"))       
+        print("Current count: " + str(comics_links_counter+1) + " of " +
               str(len(series_links)))
-        # Checar, através da comparação do contador com a quantidade de itens, 
-        # se o scraping está completo
+        # If the scraping is complete, load the files
         if comics_links_counter + 1 == len(series_links):
-            print("Scraping completo. Carregando arquivos.")
+            print("Scraping already completed. Loading files")
             comics_links = join_comics_links()
-        # Se não estiver, continuar o scraping de onde parou
+        # If the scraping is not complete, continue it
         else:
-            print("Scraping iniciado mas não completo. Continuando...")
+            print("Scraping initiated but not completed. Continuing...")
             get_issues_links_from_series(series_links[comics_links_counter+1:], 
                                          comics_links_counter)
-            comics_links = join_comics_links()
-    # Se o contador não existir, iniciar o scraping        
+            comics_links = join_comics_links()            
+    # If the file does not exists, start the scraping
     else:
-        print("Scraping de links de comics não iniciado.")
-        print("Iniciando scraping de links de comics.")
+        print("Comics links extracting not started.")
+        print("Starting comics links scraping")
         comics_links_counter = 0
         get_issues_links_from_series(series_links, comics_links_counter)
         comics_links = join_comics_links()
-# Se a pasta não existir, cria-la e iniciar o scraping
+# If the folder does not exist, create the folder and start the scraping
 else:
-    print("Pasta comics_links_files não existe.")
-    print("Criando pasta comics_links_files")
+    print("Folder does not exists.")
+    print("Creating folder comics_links_files")
     os.makedirs("comics_links_files")
-    print("Iniciando scraping de links de comics.")
+    print("Starting comics links scraping")
     comics_links_counter = 0
     get_issues_links_from_series(series_links, comics_links_counter)
     comics_links = join_comics_links()
 
-# Checar se a pasta 'comics_info_files' existe    
+# Check if the comics_info_files folder exists    
 if os.path.isdir('comics_info_files'):
-    print("Pasta comics_info_files já existe. Checando arquivos.")
-    # Checar se o arquivo 'comics_info_counter.p' (contador) existe
+    print("Folder comics_info_files already exists. Checking for files")
+    # Check if the counter file exists
     if os.path.isfile('comics_info_files/comics_info_counter.p'):
-        # Carregar o contador
+        # If it exists, load the counter
         comics_info_counter = pickle.load(open("comics_info_counter.p"))        
-        print("Contagem atual: " + str(comics_info_counter+1) + " de " +
+        print("Current count: " + str(comics_info_counter+1) + " of " +
               str(len(comics_links)))
-        # Checar, através da comparação do contador com a quantidade de itens, 
-        # se o scraping está completo
+        # If the counter is equal to the quantity of items in the comics_links list
         if comics_info_counter + 1 == len(comics_links):
-            print("Scraping já completo. Carregando arquivos.")
-        # Se não estiver completo, continuar o scraping de onde parou            
+            print("Scraping already completed. Loading files")            
+        # If the counter is not equal to the quantity of items, continue 
+		# the scraping
         else:
-            print("Scraping iniciado mas não completo. Continuando...")
+            print("Scraping initiated but not completed. Continuing...")
             get_all_comics_info(comics_links[comics_info_counter+1:], 
                                 comics_info_counter)
-    # Se o contador não existir, iniciar o scraping
+    # If the counter does not exists, start the scraping
     else:
-        print("Scraping de informações de comics não iniciado.")
-        print("Iniciando scraping de informações de comics.")
+        print("Comics info extracting not started.")
+        print("Starting comics info scraping")
         comics_info_counter = 0
         get_all_comics_info(comics_links, comics_info_counter)
-# Se a pasta não existir, cria-la e iniciar o scraping
+# If the folder does not exists, create it and start the scraping
 else:
-    print("Pasta comics_info_files não existe.")
-    print("Criando pasta comics_info_files")
+    print("Folder does not exists.")
+    print("Creating folder comics_info_files")
     os.makedirs("comics_info_files")
-    print("Iniciando scraping de informações de comics.")
+    print("Starting comics info scraping")
     comics_info_counter = 0
     get_all_comics_info(comics_links, comics_info_counter)
-    
-# Juntar as informações dos comics
+
+# Load information from comics and create a DataFrame with it
 join_comics_info()
-# Carregar as informações de todos os comics
+# Load information of all comics
 comics_info = pickle.load(open("comics_info_files/all_comics_info.p","rb"))
-# Criar um DataFrame com a lista de dictionaries
+# Create DataFrame with list of dictionaries
 comics_df = pd.DataFrame(comics_info)
-#Criar CSV com o DataFrame
+# We can create a CSV with it
 comics_df.to_csv("comixology_comics_dataset.csv")
