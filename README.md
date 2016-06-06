@@ -16,4 +16,6 @@ You can find a post explaining the scraping process in the following links:
 
 ## Data Analysis with Python / Pandas
 
-Coming soon! :)
+[Post in english](http://felipegalvao.com.br/blog/2016/06/06/digital-comics-analysis-python-marvel-or-dc-and-some-other-conclusions/);
+
+[Post em português](http://felipegalvao.com.br/blog/2016/06/06/analise-de-comics-digitais-python-marvel-ou-dc/);
